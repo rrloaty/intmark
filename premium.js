@@ -4,6 +4,7 @@
 
 const premiumUsers = [
   "6976365864",
-    "000"
+    "000",
+"6940101627"
   // your Admin ID is premium by default
 ];

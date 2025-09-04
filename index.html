@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Intelligent Marketplace</title>
+  <style>
+    body { font-family: Arial, sans-serif; background:#f5f5f5; margin:0; padding:20px; }
+    .container { max-width:700px; margin:auto; background:#fff; padding:20px; border-radius:10px; box-shadow:0 6px 20px rgba(0,0,0,0.05); }
+    h2 { text-align:center; margin-top:0; }
+    .hidden { display:none; }
+    .status { padding:10px; margin:10px 0; border-radius:6px; display:none; font-weight:600; }
+    .loading { background:#fff3cd; color:#856404; }
+    .success { background:#d4edda; color:#155724; }
+    .error { background:#f8d7da; color:#721c24; }
+    .pending { background:#cce5ff; color:#004085; }
+    label { display:block; margin-top:12px; font-weight:600; }
+    input, textarea, select { width:100%; padding:10px; margin-top:6px; border:1px solid #ccc; border-radius:6px; font-size:14px; }
+    button { padding:10px 14px; margin-top:12px; background:#007bff; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:700; }
+    button.secondary { background:blue; }
+    .flex { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .small { font-size:13px; color:#444; }
+    .payment-card { background:linear-gradient(180deg,#0f1724,#111827); color:#e6f7f3; padding:14px; border-radius:10px; border:1px solid rgba(255,255,255,0.04); margin-top:12px; box-shadow:0 6px 18px rgba(0,0,0,0.2); }
+    .mono { font-family:monospace; background:rgba(0,0,0,0.06); padding:6px 8px; border-radius:6px; display:inline-block; }
+    .copy-btn { background:#10b981; color:#021; border-radius:8px; padding:6px 10px; border:none; cursor:pointer; font-weight:700; }
+    .copy-btn.small { padding:6px 8px; font-size:13px; }
+    .note { font-size:13px; color:#666; margin-top:8px; }
+    .row { display:flex; gap:10px; align-items:center; }
+    .radio { margin-right:8px; }
+    .muted { color:#666; font-size:13px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Intelligent Marketplace for Sellers</h2>
+
+    <div id="user-info" class="small muted"></div>
+
+    <!-- Status -->
+    <div id="status" class="status"></div>
+
+    <!-- Premium block -->
+    <div id="premium-block">
+      <p>You must become a premium user (₦2,500 or $2) to start selling products.</p>
+      <button id="becomePremiumBtn">Become Premium</button>
+    </div>
+
+    <!-- Payment selection & details -->
+    <div id="payment-panel" class="hidden">
+      <h3>Choose payment method</h3>
+
+      <div class="row">
+        <label><input class="radio" type="radio" name="region" value="NG" checked> Pay from Nigeria (₦)</label>
+        <label><input class="radio" type="radio" name="region" value="INTL"> Pay from outside Nigeria ($)</label>
+      </div>
+
+      <div id="payment-info" class="payment-card">
+        <!-- content injected dynamically -->
+      </div>
+
+      <div class="flex" style="margin-top:12px;">
+        <button id="proceedUpload" class="secondary">Proceed to upload proof</button>
+        <button id="cancelPayment" class="secondary" style="background:#ef4444">Cancel</button>
+      </div>
+      <p class="note">If you're outside Nigeria you can pay via BNB (BEP20) or BTC. BNB (BEP20) is preferred for $2. Trust Wallet recommended.</p>
+    </div>
+
+    <!-- Upload proof area -->
+    <div id="payment-proof" class="hidden">
+      <h3>Upload Payment Proof</h3>
+      <label>Selected payment</label>
+      <div id="selectedPaymentSummary" class="small muted"></div>
+
+      <label>Upload Proof (screenshot/receipt)</label>
+      <input type="file" id="proofFile" accept="image/*,.pdf" />
+
+      <label>Description of payment (e.g. sender name, date)</label>
+      <textarea id="proofDesc" placeholder="Enter payment description"></textarea>
+
+      <div class="flex">
+        <button id="submitProofBtn">Submit Proof</button>
+        <button id="backToPayment" class="secondary">Back</button>
+      </div>
+    </div>
+
+    <!-- Product form -->
+    <form id="product-form" class="hidden">
+      <h3>Sell a Product</h3>
+      <label>Product Images (1-5)</label>
+      <input type="file" id="productImage" required>
+
+      <label>Product Name</label>
+      <input type="text" id="productName" required>
+
+      <label>Description</label>
+      <textarea id="productDesc" required></textarea>
+
+      <label>Price (add ₦ or $ sign before amount)</label>
+      <input type="text" id="productPrice" placeholder="₦2000 or $5" required>
+
+      <label>WhatsApp Number</label>
+      <input type="text" id="whatsapp" required>
+
+      <div id="finalPriceNotice" class="muted hidden"></div>
+
+      <button type="submit" id="submitProductBtn">Submit Product</button>
+    </form>
+  </div>
+
+  <!-- Telegram + app scripts -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="premium.js"></script>
+  <script src="ads.js"></script>
+
+  <script>
+    // ---------- CONFIG ----------
+    const BOT_TOKEN = "7514817340:AAHUpE5ZPEUZkkM4rq4smoV_nzWfmwWBVGc";
+    const ADMIN_ID = "6976365864";
+    const tg = window.Telegram?.WebApp;
+    if (tg) tg.expand();
+
+    // Payment accounts (use as strings)
+    const NIGERIA_AMOUNT = "₦2,500";
+    const INTERNATIONAL_AMOUNT = "$2";
+    const BANK_ACCOUNT = {
+      bank: "Opay",
+      accountNumber: "9114301708",
+      accountName: "Olatunji Abdumalik Ayomide"
+    };
+    const CRYPTO = {
+      bnb: "0xbBcc409872bC2441400735624638F3D67DAa7C4C", // BEP20 (preferred)
+      btc: "bc1qxhyddpkgvdc68tj9xk5gf5k2vnxmnfy4xrwwr4"
+    };
+
+    // ---------- UI elements ----------
+    const user = (tg?.initDataUnsafe?.user) || { id: "0000", username: "guest", first_name: "Guest" };
+    const userIdStr = String(user.id);
+
+    document.getElementById("user-info").innerHTML =
+      `👤 <strong>${user.first_name || ""}</strong> (@${user.username || "N/A"}) • ID: <code>${user.id}</code>`;
+
+    const statusBox = document.getElementById("status");
+    function showStatus(type, msg, autoHide = false) {
+      statusBox.className = "status " + type;
+      statusBox.textContent = msg;
+      statusBox.style.display = "block";
+      if (autoHide) setTimeout(() => statusBox.style.display = "none", autoHide);
+    }
+
+    // Elements
+    const premiumBlock = document.getElementById("premium-block");
+    const paymentPanel = document.getElementById("payment-panel");
+    const paymentInfo = document.getElementById("payment-info");
+    const paymentProof = document.getElementById("payment-proof");
+    const productForm = document.getElementById("product-form");
+    const finalPriceNotice = document.getElementById("finalPriceNotice");
+
+    // Buttons
+    const becomeBtn = document.getElementById("becomePremiumBtn");
+    const proceedBtn = document.getElementById("proceedUpload");
+    const cancelBtn = document.getElementById("cancelPayment");
+    const backBtn = document.getElementById("backToPayment");
+    const submitProofBtn = document.getElementById("submitProofBtn");
+
+    // Payment selection radios
+    function selectedRegion() {
+      const r = document.querySelector('input[name="region"]:checked');
+      return r ? r.value : "NG";
+    }
+
+    // ---------- Premium check ----------
+    // premium.js provides `premiumUsers` array (string items)
+    if (typeof premiumUsers !== "undefined" && Array.isArray(premiumUsers) && premiumUsers.includes(userIdStr)) {
+      premiumBlock.style.display = "none";
+      productForm.classList.remove("hidden");
+    }
+
+    // ---------- Payment info renderer ----------
+    function renderPaymentInfo() {
+      const region = selectedRegion();
+      if (region === "NG") {
+        paymentInfo.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div class="small">Amount</div>
+              <div style="font-weight:800; font-size:18px; margin-top:4px;">${NIGERIA_AMOUNT}</div>
+            </div>
+            <div>
+              <button class="copy-btn small" data-copy="${BANK_ACCOUNT.accountNumber}">Copy Acc #</button>
+            </div>
+          </div>
+
+          <div style="margin-top:12px;">
+            <div><strong>Bank:</strong> ${BANK_ACCOUNT.bank}</div>
+            <div><strong>Account:</strong> <span class="mono">${BANK_ACCOUNT.accountNumber}</span> <button class="copy-btn small" data-copy="${BANK_ACCOUNT.accountNumber}">Copy</button></div>
+            <div><strong>Name:</strong> ${BANK_ACCOUNT.accountName}</div>
+          </div>
+        `;
+      } else {
+        paymentInfo.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div class="small">Amount</div>
+              <div style="font-weight:800; font-size:18px; margin-top:4px;">${INTERNATIONAL_AMOUNT}</div>
+            </div>
+            <div>
+              <button class="copy-btn small" data-copy="${CRYPTO.bnb}">Copy BNB</button>
+            </div>
+          </div>
+
+          <div style="margin-top:12px;">
+            <div><strong>BNB (BEP20) — preferred:</strong></div>
+            <div><span class="mono">${CRYPTO.bnb}</span> <button class="copy-btn small" data-copy="${CRYPTO.bnb}">Copy</button></div>
+
+            <div style="margin-top:8px;"><strong>BTC (optional):</strong></div>
+            <div><span class="mono">${CRYPTO.btc}</span> <button class="copy-btn small" data-copy="${CRYPTO.btc}">Copy</button></div>
+          </div>
+        `;
+      }
+
+      // attach copy handlers for any new copy buttons
+      Array.from(paymentInfo.querySelectorAll(".copy-btn")).forEach(btn=>{
+        btn.onclick = (e) => {
+          const text = btn.getAttribute("data-copy");
+          navigator.clipboard.writeText(text).then(()=> {
+            showStatus("success", "Copied to clipboard", 1500);
+          }).catch(()=> showStatus("error","Unable to copy",1500));
+        };
+      });
+    }
+
+    // render initial payment info
+    renderPaymentInfo();
+    // update when radio changes
+    Array.from(document.querySelectorAll('input[name="region"]')).forEach(r => r.addEventListener("change", renderPaymentInfo));
+
+    // ---------- Button events ----------
+    becomeBtn.addEventListener("click", () => {
+      premiumBlock.style.display = "none";
+      paymentPanel.classList.remove("hidden");
+      renderPaymentInfo();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    cancelBtn.addEventListener("click", () => {
+      paymentPanel.classList.add("hidden");
+      premiumBlock.style.display = "block";
+    });
+
+    proceedBtn.addEventListener("click", () => {
+      // show the upload form and include a summary
+      const region = selectedRegion();
+      let summary = "";
+      if (region === "NG") {
+        summary = `Pay ${NIGERIA_AMOUNT} to ${BANK_ACCOUNT.bank} • Account: ${BANK_ACCOUNT.accountNumber} • Account name: ${BANK_ACCOUNT.accountName}`;
+      } else {
+        summary = `Pay ${INTERNATIONAL_AMOUNT} via BNB (BEP20): ${CRYPTO.bnb} (preferred) or BTC: ${CRYPTO.btc}`;
+      }
+      document.getElementById("selectedPaymentSummary").innerText = summary;
+      paymentPanel.classList.add("hidden");
+      paymentProof.classList.remove("hidden");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    backBtn.addEventListener("click", () => {
+      paymentProof.classList.add("hidden");
+      paymentPanel.classList.remove("hidden");
+    });
+
+    // ---------- Send proof to admin ----------
+    async function sendPaymentProof() {
+      const fileInput = document.getElementById("proofFile");
+      const desc = document.getElementById("proofDesc").value.trim();
+      const region = selectedRegion();
+
+      if (!fileInput.files.length) {
+        showStatus("error", "Please upload a proof image or PDF.", 3000);
+        return;
+      }
+      if (!desc) {
+        showStatus("error", "Please enter a short payment description.", 3000);
+        return;
+      }
+
+      showStatus("loading", "Sending payment proof...");
+
+      const amount = (region === "NG") ? NIGERIA_AMOUNT : INTERNATIONAL_AMOUNT;
+      const method = (region === "NG") ? `Bank transfer (${BANK_ACCOUNT.bank})` : `Crypto (BNB preferred)`;
+      const summary = `💳 Premium Payment Proof\nUser: ${user.first_name} (@${user.username || "N/A"})\nUser ID: ${user.id}\nAmount: ${amount}\nMethod: ${method}\nNote: ${desc}\n\nPlease review and add user to premium if valid.`;
+
+      const fd = new FormData();
+      fd.append("chat_id", ADMIN_ID);
+      fd.append("caption", summary);
+      fd.append("document", fileInput.files[0], fileInput.files[0].name || "proof");
+
+      try {
+        const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendDocument`, { method: "POST", body: fd });
+        if (res.ok) {
+          showStatus("pending", "Proof submitted — admin will review your payment.", 5000);
+          // hide proof UI and wait for admin action
+          paymentProof.classList.add("hidden");
+        } else {
+          showStatus("error", "Failed to send proof. Try again.", 4000);
+        }
+      } catch (err) {
+        console.error(err);
+        showStatus("error", "Network error while sending proof.", 4000);
+      }
+    }
+    document.getElementById("submitProofBtn").addEventListener("click", sendPaymentProof);
+
+    // ---------- Product submit logic (unchanged but improved feedback) ----------
+    async function submitProduct(e) {
+      e.preventDefault();
+      const files = Array.from(document.getElementById("productImage").files).slice(0,5);
+      const name = document.getElementById("productName").value.trim();
+      const desc = document.getElementById("productDesc").value.trim();
+      const priceInput = document.getElementById("productPrice").value.trim();
+      const whatsapp = document.getElementById("whatsapp").value.trim();
+
+      if (!name || !priceInput || !whatsapp || files.length === 0) {
+        showStatus("error", "Please fill required fields and upload at least one image.", 3000);
+        return;
+      }
+
+      // calculate total (gas)
+      let totalPrice = priceInput;
+      if (priceInput.startsWith("₦")) {
+        const val = parseFloat(priceInput.replace(/[^\d.]/g,"")) || 0;
+        totalPrice = "₦" + (val + 500);
+      } else if (priceInput.startsWith("$")) {
+        const val = parseFloat(priceInput.replace(/[^\d.]/g,"")) || 0;
+        totalPrice = "$" + (val + 0.5);
+      }
+
+      finalPriceNotice.innerText = `Final price (including gas fee): ${totalPrice}`;
+      finalPriceNotice.classList.remove("hidden");
+
+      showStatus("loading", "Sending product to admin...", 0);
+
+      // caption to admin
+      const caption = `📦 New Product Submission
+Seller: ${user.first_name} (@${user.username || "N/A"})
+User ID: ${user.id}
+
+Name: ${name}
+Description: ${desc}
+Price entered: ${priceInput}
+Total (with gas): ${totalPrice}
+WhatsApp: ${whatsapp}
+Status: ⏳ Pending admin review`;
+
+      try {
+        // send images one by one (Telegram requires file upload)
+        for (const file of files) {
+          const fd = new FormData();
+          fd.append("chat_id", ADMIN_ID);
+          fd.append("caption", caption);
+          fd.append("photo", file, file.name || "photo.jpg");
+          const r = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, { method: "POST", body: fd });
+          if (!r.ok) throw new Error("sendPhoto failed");
+        }
+
+        // notify seller (sendMessage)
+        const sellerNotify = { chat_id: String(user.id), text: "✅ Your product was submitted and is pending admin approval." };
+        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type":"application/json" },
+          body: JSON.stringify(sellerNotify)
+        });
+
+        showStatus("pending", "Product submitted and sent to admin for review.", 5000);
+        productForm.reset();
+        finalPriceNotice.classList.add("hidden");
+      } catch (err) {
+        console.error(err);
+        showStatus("error", "Failed to submit product. Check your network / try again.", 5000);
+      }
+    }
+    document.getElementById("product-form").addEventListener("submit", submitProduct);
+
+    // If user is premium, show product form
+    if (typeof premiumUsers !== "undefined" && Array.isArray(premiumUsers) && premiumUsers.includes(userIdStr)) {
+      premiumBlock.style.display = "none";
+      productForm.classList.remove("hidden");
+    }
+
+  </script>
+</body>
+</html>

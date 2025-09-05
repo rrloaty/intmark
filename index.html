@@ -101,6 +101,9 @@
       <label>WhatsApp Number</label>
       <input type="text" id="whatsapp" required>
 
+      <label>Paste your contact link here</label>
+      <input type="url" id="contact_link" required>
+
       <div id="finalPriceNotice" class="muted hidden"></div>
 
       <button type="submit" id="submitProductBtn">Submit Product</button>
@@ -119,7 +122,7 @@
     const tg = window.Telegram?.WebApp;
     if (tg) tg.expand();
 
-    // Payment accounts (use as strings)
+    // Payment accounts
     const NIGERIA_AMOUNT = "₦2,500";
     const INTERNATIONAL_AMOUNT = "$2";
     const BANK_ACCOUNT = {
@@ -128,7 +131,7 @@
       accountName: "Olatunji Abdumalik Ayomide"
     };
     const CRYPTO = {
-      bnb: "0xbBcc409872bC2441400735624638F3D67DAa7C4C", // BEP20 (preferred)
+      bnb: "0xbBcc409872bC2441400735624638F3D67DAa7C4C",
       btc: "bc1qxhyddpkgvdc68tj9xk5gf5k2vnxmnfy4xrwwr4"
     };
 
@@ -169,7 +172,6 @@
     }
 
     // ---------- Premium check ----------
-    // premium.js provides `premiumUsers` array (string items)
     if (typeof premiumUsers !== "undefined" && Array.isArray(premiumUsers) && premiumUsers.includes(userIdStr)) {
       premiumBlock.style.display = "none";
       productForm.classList.remove("hidden");
@@ -218,9 +220,8 @@
         `;
       }
 
-      // attach copy handlers for any new copy buttons
       Array.from(paymentInfo.querySelectorAll(".copy-btn")).forEach(btn=>{
-        btn.onclick = (e) => {
+        btn.onclick = () => {
           const text = btn.getAttribute("data-copy");
           navigator.clipboard.writeText(text).then(()=> {
             showStatus("success", "Copied to clipboard", 1500);
@@ -229,9 +230,7 @@
       });
     }
 
-    // render initial payment info
     renderPaymentInfo();
-    // update when radio changes
     Array.from(document.querySelectorAll('input[name="region"]')).forEach(r => r.addEventListener("change", renderPaymentInfo));
 
     // ---------- Button events ----------
@@ -247,7 +246,6 @@
     });
 
     proceedBtn.addEventListener("click", () => {
-      // show the upload form and include a summary
       const region = selectedRegion();
       let summary = "";
       if (region === "NG") {
@@ -296,7 +294,6 @@
         const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendDocument`, { method: "POST", body: fd });
         if (res.ok) {
           showStatus("pending", "Proof submitted — admin will review your payment.", 5000);
-          // hide proof UI and wait for admin action
           paymentProof.classList.add("hidden");
         } else {
           showStatus("error", "Failed to send proof. Try again.", 4000);
@@ -308,7 +305,7 @@
     }
     document.getElementById("submitProofBtn").addEventListener("click", sendPaymentProof);
 
-    // ---------- Product submit logic (unchanged but improved feedback) ----------
+    // ---------- Product submit logic (with contact link) ----------
     async function submitProduct(e) {
       e.preventDefault();
       const files = Array.from(document.getElementById("productImage").files).slice(0,5);
@@ -316,17 +313,17 @@
       const desc = document.getElementById("productDesc").value.trim();
       const priceInput = document.getElementById("productPrice").value.trim();
       const whatsapp = document.getElementById("whatsapp").value.trim();
+      const contactLink = document.getElementById("contact_link").value.trim(); // ✅ added
 
-      if (!name || !priceInput || !whatsapp || files.length === 0) {
+      if (!name || !priceInput || !whatsapp || !contactLink || files.length === 0) {
         showStatus("error", "Please fill required fields and upload at least one image.", 3000);
         return;
       }
 
-      // calculate total (gas)
       let totalPrice = priceInput;
-      if (priceInput.startsWith("₦")) {
+      if (priceInput.startsWith("N")) {
         const val = parseFloat(priceInput.replace(/[^\d.]/g,"")) || 0;
-        totalPrice = "₦" + (val + 500);
+        totalPrice = "N" + (val + 500);
       } else if (priceInput.startsWith("$")) {
         const val = parseFloat(priceInput.replace(/[^\d.]/g,"")) || 0;
         totalPrice = "$" + (val + 0.5);
@@ -337,7 +334,7 @@
 
       showStatus("loading", "Sending product to admin...", 0);
 
-      // caption to admin
+      // ✅ contact link included here
       const caption = `📦 New Product Submission
 Seller: ${user.first_name} (@${user.username || "N/A"})
 User ID: ${user.id}
@@ -347,10 +344,10 @@ Description: ${desc}
 Price entered: ${priceInput}
 Total (with gas): ${totalPrice}
 WhatsApp: ${whatsapp}
+Contact Link: ${contactLink}
 Status: ⏳ Pending admin review`;
 
       try {
-        // send images one by one (Telegram requires file upload)
         for (const file of files) {
           const fd = new FormData();
           fd.append("chat_id", ADMIN_ID);
@@ -360,7 +357,6 @@ Status: ⏳ Pending admin review`;
           if (!r.ok) throw new Error("sendPhoto failed");
         }
 
-        // notify seller (sendMessage)
         const sellerNotify = { chat_id: String(user.id), text: "✅ Your product was submitted and is pending admin approval." };
         await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
           method: "POST",
@@ -368,22 +364,15 @@ Status: ⏳ Pending admin review`;
           body: JSON.stringify(sellerNotify)
         });
 
-        showStatus("pending", "Product submitted and sent to admin for review.", 5000);
+        showStatus("success", "Product submitted successfully! please wait for admin to confirm it", 4000);
         productForm.reset();
         finalPriceNotice.classList.add("hidden");
       } catch (err) {
         console.error(err);
-        showStatus("error", "Failed to submit product. Check your network / try again.", 5000);
+        showStatus("error", "Error sending product. Please retry.", 4000);
       }
     }
     document.getElementById("product-form").addEventListener("submit", submitProduct);
-
-    // If user is premium, show product form
-    if (typeof premiumUsers !== "undefined" && Array.isArray(premiumUsers) && premiumUsers.includes(userIdStr)) {
-      premiumBlock.style.display = "none";
-      productForm.classList.remove("hidden");
-    }
-
   </script>
 </body>
 </html>

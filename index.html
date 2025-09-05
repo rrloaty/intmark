@@ -54,9 +54,7 @@
         <label><input class="radio" type="radio" name="region" value="INTL"> Pay from outside Nigeria ($)</label>
       </div>
 
-      <div id="payment-info" class="payment-card">
-        <!-- content injected dynamically -->
-      </div>
+      <div id="payment-info" class="payment-card"></div>
 
       <div class="flex" style="margin-top:12px;">
         <button id="proceedUpload" class="secondary">Proceed to upload proof</button>
@@ -264,7 +262,7 @@
       paymentPanel.classList.remove("hidden");
     });
 
-    // ---------- Send proof to admin ----------
+    // ---------- Send proof to admin + notify user ----------
     async function sendPaymentProof() {
       const fileInput = document.getElementById("proofFile");
       const desc = document.getElementById("proofDesc").value.trim();
@@ -295,6 +293,18 @@
         if (res.ok) {
           showStatus("pending", "Proof submitted — admin will review your payment.", 5000);
           paymentProof.classList.add("hidden");
+
+          // ✅ Notify the user
+          const userNotify = {
+            chat_id: String(user.id),
+            text: "✅ Your payment proof has been submitted. Admin will confirm it soon."
+          };
+          await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(userNotify)
+          });
+
         } else {
           showStatus("error", "Failed to send proof. Try again.", 4000);
         }
@@ -313,7 +323,7 @@
       const desc = document.getElementById("productDesc").value.trim();
       const priceInput = document.getElementById("productPrice").value.trim();
       const whatsapp = document.getElementById("whatsapp").value.trim();
-      const contactLink = document.getElementById("contact_link").value.trim(); // ✅ added
+      const contactLink = document.getElementById("contact_link").value.trim();
 
       if (!name || !priceInput || !whatsapp || !contactLink || files.length === 0) {
         showStatus("error", "Please fill required fields and upload at least one image.", 3000);
@@ -334,7 +344,6 @@
 
       showStatus("loading", "Sending product to admin...", 0);
 
-      // ✅ contact link included here
       const caption = `📦 New Product Submission
 Seller: ${user.first_name} (@${user.username || "N/A"})
 User ID: ${user.id}
@@ -354,25 +363,28 @@ Status: ⏳ Pending admin review`;
           fd.append("caption", caption);
           fd.append("photo", file, file.name || "photo.jpg");
           const r = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, { method: "POST", body: fd });
-          if (!r.ok) throw new Error("sendPhoto failed");
+          if (!r.ok) throw new Error("Failed sendPhoto");
         }
 
-        const sellerNotify = { chat_id: String(user.id), text: "✅ Your product was submitted and is pending admin approval." };
+        // Notify user
+        const notify = {
+          chat_id: String(user.id),
+          text: "✅ Your product has been submitted and is pending admin approval."
+        };
         await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-          method: "POST",
-          headers: { "Content-Type":"application/json" },
-          body: JSON.stringify(sellerNotify)
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify(notify)
         });
 
-        showStatus("success", "Product submitted successfully! please wait for admin to confirm it", 4000);
+        showStatus("success","Product submitted successfully!",4000);
         productForm.reset();
-        finalPriceNotice.classList.add("hidden");
       } catch (err) {
         console.error(err);
-        showStatus("error", "Error sending product. Please retry.", 4000);
+        showStatus("error","Error sending product. Try again.",4000);
       }
     }
-    document.getElementById("product-form").addEventListener("submit", submitProduct);
+    productForm.addEventListener("submit", submitProduct);
   </script>
 </body>
 </html>

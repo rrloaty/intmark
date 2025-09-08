@@ -17,13 +17,8 @@
       padding: 20px;
       text-align: center;
     }
-    h1 {
-      color: #333;
-    }
-    p {
-      margin: 20px 0;
-      font-size: 18px;
-    }
+    h1 { color: #333; }
+    p { margin: 20px 0; font-size: 18px; }
     button {
       padding: 15px 30px;
       font-size: 16px;
@@ -33,67 +28,67 @@
       border-radius: 8px;
       cursor: pointer;
     }
-    button:hover {
-      background-color: #0056b3;
-    }
-    #warning {
-      color: red;
-      font-weight: bold;
-    }
+    button:hover { background-color: #0056b3; }
+    #warning { color: red; font-weight: bold; margin-top: 20px; }
   </style>
 </head>
 <body>
   <h1>Intelligent Marketplace Seller Contact</h1>
   <p>Click the button below to contact the seller of the account</p>
   <button id="contactBtn">Contact Seller</button>
-  <p id="warning" style="display:none;">Please open this website in Chrome or another full browser to proceed.</p>
+  <p id="warning" style="display:none;">
+    Please open this website in Chrome, Firefox, Edge, or another full browser to proceed.
+  </p>
 
   <script>
-    const adsLink = "https://otieu.com/4/9831065";
+    const adsLink = "https://otieu.com/4/9831065"; // Your ad link
     const contactBtn = document.getElementById('contactBtn');
     const warning = document.getElementById('warning');
 
-    function getQueryParam(name) {
-      const urlParams = new URLSearchParams(window.location.search);
-      return urlParams.get(name);
+    // Detect full browsers (block in-app browsers including Telegram)
+    function isFullBrowser() {
+      const ua = navigator.userAgent || navigator.vendor || window.opera;
+      const inAppBrowserPatterns = [
+        /FBAN/i, /FBAV/i, /Instagram/i, /Twitter/i,
+        /Line/i, /Snapchat/i, /TikTok/i, /Pinterest/i,
+        /Telegram/i
+      ];
+      return !inAppBrowserPatterns.some(pattern => pattern.test(ua));
     }
 
-    // Detect if ads can open (avoid in-app browsers)
-    function canOpenAds() {
-      const ua = navigator.userAgent;
-      const inApp = /FBAN|FBAV|Instagram|Twitter|Line|Snapchat/.test(ua);
-      return !inApp;
-    }
-
-    // Block site if ads can't open
-    if (!canOpenAds()) {
+    // Hide button and show warning if in-app browser
+    if (!isFullBrowser()) {
       contactBtn.style.display = 'none';
       warning.style.display = 'block';
     }
 
-    // Track if ad has already been shown
-    let adShown = false;
-
-    // Show ad once, 3 seconds after page load
+    // Show initial ad once after 3 seconds
+    let initialAdShown = false;
     window.addEventListener('load', () => {
-      if (canOpenAds() && !adShown) {
+      if (isFullBrowser() && !initialAdShown) {
         setTimeout(() => {
           window.open(adsLink, '_blank');
-          adShown = true;
-        }, 3000); // 3 seconds delay
+          initialAdShown = true;
+        }, 3000);
       }
     });
 
+    // Handle contact button click: show ad first, then redirect
     contactBtn.addEventListener('click', () => {
-      const contactLink = getQueryParam('contact');
+      const contactLink = new URLSearchParams(window.location.search).get('contact');
       if (!contactLink) {
         alert("Please select a valid account");
         return;
       }
-      // Redirect to seller link immediately
-      window.location.href = contactLink;
-    });
 
+      // Open ad in new tab
+      window.open(adsLink, '_blank');
+
+      // Delay redirect to seller link slightly (optional)
+      setTimeout(() => {
+        window.location.href = contactLink;
+      }, 500); // 0.5 seconds delay to allow ad to open
+    });
   </script>
 </body>
 </html>

@@ -18,8 +18,9 @@
     button { padding:10px 14px; margin-top:12px; background:#007bff; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:700; }
     #submitAnother { display:none; margin-top:20px; background:#28a745; }
     #removeAds { display:block; margin-bottom:15px; background:#dc3545; }
-    #userInfo { padding:10px; margin-bottom:15px; background:#e9ecef; border-radius:6px; font-weight:600; }
+    #userInfo { padding:10px; margin-bottom:15px; background:#e9ecef; border-radius:6px; font-weight:600; text-align:center; }
   </style>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
   <div class="container">
@@ -65,20 +66,20 @@
   const BOT_TOKEN = "7514817340:AAHUpE5ZPEUZkkM4rq4smoV_nzWfmwWBVGc";
   const ADMIN_ID = "6976365864";
 
-  // --- Dynamic Telegram user info ---
-  const TELEGRAM_USER_ID = Telegram.WebApp.initDataUnsafe?.user?.id || "000";
-  const TELEGRAM_USER_NAME = (Telegram.WebApp.initDataUnsafe?.user?.first_name || "") + 
-                             (Telegram.WebApp.initDataUnsafe?.user?.last_name ? " " + Telegram.WebApp.initDataUnsafe.user.last_name : "") || "John Doe";
-  // ----------------------------------
+  // Telegram WebApp login
+  const tg = window.Telegram.WebApp;
+  tg.expand();
+  const TELEGRAM_USER_ID = tg.initDataUnsafe?.user?.id || "000";
+  const TELEGRAM_USER_NAME = (tg.initDataUnsafe?.user?.first_name || "") + 
+                             (tg.initDataUnsafe?.user?.last_name ? " " + tg.initDataUnsafe.user.last_name : "") || "John Doe";
+
+  document.getElementById("userInfo").textContent = 
+    `Logged in as: ${TELEGRAM_USER_NAME} (ID: ${TELEGRAM_USER_ID})`;
 
   const statusBox = document.getElementById("status");
   const submitAnotherBtn = document.getElementById("submitAnother");
   const removeAdsBtn = document.getElementById("removeAds");
   const productForm = document.getElementById("product-form");
-  const userInfoDiv = document.getElementById("userInfo");
-
-  // Display correct Telegram user info
-  userInfoDiv.textContent = `Logged in as: ${TELEGRAM_USER_NAME} (ID: ${TELEGRAM_USER_ID})`;
 
   function showStatus(type, msg, autoHide=0){
     statusBox.className = "status " + type;
@@ -88,16 +89,16 @@
   }
 
   // Hide Remove Ads button if user is premium
-  if(premiumUsers.includes(TELEGRAM_USER_ID)){
+  if(typeof premiumUsers !== "undefined" && premiumUsers.includes(TELEGRAM_USER_ID)){
     removeAdsBtn.style.display = "none";
   } else {
     removeAdsBtn.style.display = "block";
   }
 
-  // Show ads only for non-premium users
+  // Show ad only for non-premium users
   function showAdIfNotPremium() {
     try {
-      if(typeof show_9830606 === "function" && !premiumUsers.includes(TELEGRAM_USER_ID)){
+      if(typeof show_9830606 === "function" && (!premiumUsers || !premiumUsers.includes(TELEGRAM_USER_ID))){
         show_9830606();
       }
     } catch(e) { console.error(e); }
@@ -118,7 +119,7 @@
     const whatsapp = document.getElementById("whatsapp").value.trim();
     const contact = document.getElementById("contact_link").value.trim();
 
-    const caption = `📦 New Product\nName: ${name}\nDesc: ${desc}\nPrice: ${price}\nWhatsApp: ${whatsapp}\nLink: ${contact}`;
+    const caption = `📦 New Product\nSeller: ${TELEGRAM_USER_NAME} (ID: ${TELEGRAM_USER_ID})\nName: ${name}\nDesc: ${desc}\nPrice: ${price}\nWhatsApp: ${whatsapp}\nLink: ${contact}`;
 
     try{
       for(const file of files){
@@ -132,7 +133,6 @@
       productForm.style.display = "none";
       submitAnotherBtn.style.display = "block";
 
-      // Show ad after successful submission if not premium
       showAdIfNotPremium();
 
     } catch(err){
@@ -140,17 +140,16 @@
     }
   });
 
-  // Submit another product button
+  // Submit another product
   submitAnotherBtn.addEventListener("click", () => {
     productForm.reset();
     productForm.style.display = "block";
     submitAnotherBtn.style.display = "none";
 
-    // Show ad when clicking "Submit Another Product" if not premium
     showAdIfNotPremium();
   });
 
-  // Remove Ads button
+  // Remove Ads / Go Premium button
   removeAdsBtn.addEventListener("click", () => {
     window.location.href = `premium.html?user=${TELEGRAM_USER_ID}&name=${encodeURIComponent(TELEGRAM_USER_NAME)}`;
   });

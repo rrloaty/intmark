@@ -65,9 +65,11 @@
   const BOT_TOKEN = "7514817340:AAHUpE5ZPEUZkkM4rq4smoV_nzWfmwWBVGc";
   const ADMIN_ID = "6976365864";
 
-  // Replace dynamically from Telegram WebApp
-  const TELEGRAM_USER_ID = "000";
-  const TELEGRAM_USER_NAME = "John Doe"; // Replace dynamically from Telegram WebApp
+  // --- Dynamic Telegram user info ---
+  const TELEGRAM_USER_ID = Telegram.WebApp.initDataUnsafe?.user?.id || "000";
+  const TELEGRAM_USER_NAME = (Telegram.WebApp.initDataUnsafe?.user?.first_name || "") + 
+                             (Telegram.WebApp.initDataUnsafe?.user?.last_name ? " " + Telegram.WebApp.initDataUnsafe.user.last_name : "") || "John Doe";
+  // ----------------------------------
 
   const statusBox = document.getElementById("status");
   const submitAnotherBtn = document.getElementById("submitAnother");
@@ -75,7 +77,7 @@
   const productForm = document.getElementById("product-form");
   const userInfoDiv = document.getElementById("userInfo");
 
-  // Display user name and ID
+  // Display correct Telegram user info
   userInfoDiv.textContent = `Logged in as: ${TELEGRAM_USER_NAME} (ID: ${TELEGRAM_USER_ID})`;
 
   function showStatus(type, msg, autoHide=0){

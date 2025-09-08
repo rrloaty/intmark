@@ -1,5 +1,5 @@
 // Monetag Direct Link
-  const monetagLink = "YOUR_MONETAG_DIRECT_LINK";
+  const monetagLink = "https://otieu.com/4/9831065";
   const delay = 4000; // 4 seconds before open
   const cooldown = 20 * 1000; // 20 seconds cooldown
   const key = "monetag_last_redirect";

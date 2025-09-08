@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact Seller</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+    h1 {
+      color: #333;
+    }
+    p {
+      margin: 20px 0;
+      font-size: 18px;
+    }
+    button {
+      padding: 15px 30px;
+      font-size: 16px;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    #warning {
+      color: red;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Intelligent Marketplace Seller Contact</h1>
+  <p>Click the button below to contact the seller of the account</p>
+  <button id="contactBtn">Contact Seller</button>
+  <p id="warning" style="display:none;">Please open this website in Chrome or another full browser to proceed.</p>
+
+  <script>
+    const adsLink = "https://otieu.com/4/9831065";
+    const contactBtn = document.getElementById('contactBtn');
+    const warning = document.getElementById('warning');
+
+    function getQueryParam(name) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(name);
+    }
+
+    // Detect if ads can open (avoid in-app browsers)
+    function canOpenAds() {
+      const ua = navigator.userAgent;
+      const inApp = /FBAN|FBAV|Instagram|Twitter|Line|Snapchat/.test(ua);
+      return !inApp;
+    }
+
+    // Block site if ads can't open
+    if (!canOpenAds()) {
+      contactBtn.style.display = 'none';
+      warning.style.display = 'block';
+    }
+
+    // Track if ad has already been shown
+    let adShown = false;
+
+    // Show ad once, 3 seconds after page load
+    window.addEventListener('load', () => {
+      if (canOpenAds() && !adShown) {
+        setTimeout(() => {
+          window.open(adsLink, '_blank');
+          adShown = true;
+        }, 3000); // 3 seconds delay
+      }
+    });
+
+    contactBtn.addEventListener('click', () => {
+      const contactLink = getQueryParam('contact');
+      if (!contactLink) {
+        alert("Please select a valid account");
+        return;
+      }
+      // Redirect to seller link immediately
+      window.location.href = contactLink;
+    });
+
+  </script>
+</body>
+</html>

@@ -126,57 +126,105 @@
     <input type="file" id="paymentProof" multiple required>
     <button id="sendProofBtn">Send Proof to Admin</button>
   </div>
-
 <script>
-  const BOT_TOKEN = "7514817340:AAHUpE5ZPEUZkkM4rq4smoV_nzWfmwWBVGc";
-  const ADMIN_ID = "6976365864";
+const BOT_TOKEN = "7514817340:AAHUpE5ZPEUZkkM4rq4smoV_nzWfmwWBVGc";
+const ADMIN_ID = "6976365864";
 
-  const params = new URLSearchParams(window.location.search);
-  const TELEGRAM_USER_ID = params.get('user') || 'Unknown';
-  const TELEGRAM_USER_NAME = params.get('name') || 'Unknown';
+const params = new URLSearchParams(window.location.search);
+const TELEGRAM_USER_ID = params.get('user') || 'Unknown';
+const TELEGRAM_USER_NAME = params.get('name') || 'Unknown';
 
-  const userInfoDiv = document.getElementById('userInfo');
-  userInfoDiv.textContent = `Logged in as: ${TELEGRAM_USER_NAME} (ID: ${TELEGRAM_USER_ID})`;
+const userInfoDiv = document.getElementById('userInfo');
+userInfoDiv.textContent = `Logged in as: ${TELEGRAM_USER_NAME} (ID: ${TELEGRAM_USER_ID})`;
 
-  let selectedPayment = '';
-  function selectPayment(info){
-    selectedPayment = info;
-    navigator.clipboard.writeText(info).then(() => {
-      alert(`Copied: ${info}`);
+let selectedPayment = '';
+function selectPayment(info){
+  selectedPayment = info;
+  navigator.clipboard.writeText(info).then(() => {
+    alert(`Copied: ${info}`);
+  });
+}
+
+function showStatus(msg, type='success', autoHide=3000){
+  const statusBox = document.getElementById('status');
+  statusBox.textContent = msg;
+  statusBox.className = `status ${type}`;
+  statusBox.style.display = 'block';
+  if(autoHide) setTimeout(()=>statusBox.style.display='none', autoHide);
+}
+
+document.getElementById('sendProofBtn').addEventListener('click', async () => {
+  const fileInput = document.getElementById('paymentProof');
+  const files = fileInput.files;
+  if(files.length === 0) return showStatus('Please select a file to send', 'error');
+  if(!selectedPayment) return showStatus('Please select a payment method', 'error');
+
+  try {
+    // Step 1: Pending
+    showStatus('📌 Sending proof to admin... Pending', 'success', 5000);
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        chat_id: TELEGRAM_USER_ID,
+        text: `⏳ Hi ${TELEGRAM_USER_NAME}, your payment proof is pending submission...`
+      })
+    });
+
+    // Step 2: Processing
+    showStatus('⏳ Processing proof...', 'success', 3000);
+
+    // Send proof to admin
+    for(const file of files){
+      const formData = new FormData();
+      formData.append('chat_id', ADMIN_ID);
+      formData.append('caption', `📌 Payment proof from user: ${TELEGRAM_USER_NAME} (ID: ${TELEGRAM_USER_ID})\nPayment method: ${selectedPayment}`);
+      formData.append('photo', file);
+
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+        method: 'POST',
+        body: formData
+      });
+    }
+
+    // Step 3: Success
+    showStatus('✅ Proof sent successfully!', 'success');
+
+    // Send confirmation message to user
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        chat_id: TELEGRAM_USER_ID,
+        text: `✅ Hi ${TELEGRAM_USER_NAME}, your payment proof has been received successfully! You can now go back to the bot: https://t.me/intelligentmarketbot?start=r02993750606`
+      })
+    });
+
+    // Show "Go back to bot" div
+    const container = document.querySelector('.container');
+    const backDiv = document.createElement('div');
+    backDiv.style.marginTop = '20px';
+    backDiv.style.padding = '15px';
+    backDiv.style.background = '#e1f0ff';
+    backDiv.style.borderRadius = '10px';
+    backDiv.style.textAlign = 'center';
+    backDiv.style.fontWeight = '600';
+    backDiv.innerHTML = `✅ Proof sent! <br> <a href="https://t.me/intelligentmarketbot?start=r02993750606" target="_blank">Go back to the bot</a>`;
+    container.appendChild(backDiv);
+
+  } catch(err) {
+    // Step 4: Error
+    showStatus('❌ Failed to send proof: ' + err.message, 'error');
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        chat_id: TELEGRAM_USER_ID,
+        text: `❌ Hi ${TELEGRAM_USER_NAME}, there was an error sending your payment proof. Please try again.`
+      })
     });
   }
-
-  function showStatus(msg, type='success', autoHide=3000){
-    const statusBox = document.getElementById('status');
-    statusBox.textContent = msg;
-    statusBox.className = `status ${type}`;
-    statusBox.style.display = 'block';
-    if(autoHide) setTimeout(()=>statusBox.style.display='none', autoHide);
-  }
-
-  document.getElementById('sendProofBtn').addEventListener('click', async () => {
-    const fileInput = document.getElementById('paymentProof');
-    const files = fileInput.files;
-    if(files.length === 0) return showStatus('Please select a file to send', 'error');
-    if(!selectedPayment) return showStatus('Please select a payment method', 'error');
-
-    try {
-      for(const file of files){
-        const formData = new FormData();
-        formData.append('chat_id', ADMIN_ID);
-        formData.append('caption', `📌 Payment proof from user: ${TELEGRAM_USER_NAME} (ID: ${TELEGRAM_USER_ID})\nPayment method: ${selectedPayment}`);
-        formData.append('photo', file);
-
-        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
-          method: 'POST',
-          body: formData
-        });
-      }
-      showStatus('Proof sent successfully!');
-    } catch(err) {
-      showStatus('Error sending proof: ' + err.message, 'error');
-    }
-  });
+});
 </script>
 </body>
 </html>

@@ -129,6 +129,16 @@
         if(file.type.startsWith("image/")) fd.append("photo", file), await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`,{method:"POST",body:fd});
         else fd.append("document", file), await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendDocument`,{method:"POST",body:fd});
       }
+      // Notify the user that product is sent to admin
+const userMessage = `✅ Your product "${name}" has been sent to admin for review. You will be notified once approved.`;
+await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    chat_id: TELEGRAM_USER_ID,
+    text: userMessage
+  })
+});
       showStatus("success","Product sent to admin",4000);
       productForm.style.display = "none";
       submitAnotherBtn.style.display = "block";

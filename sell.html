@@ -62,24 +62,23 @@
       warning.style.display = 'block';
     }
 
-    // Show initial ad once after 3 seconds
-    let initialAdShown = false;
+    // Show ad once after 3 seconds (only if in a real browser)
     window.addEventListener('load', () => {
-      if (isFullBrowser() && !initialAdShown) {
+      if (isFullBrowser()) {
         setTimeout(() => {
           window.open(adsLink, '_blank');
-          initialAdShown = true;
         }, 3000);
       }
     });
 
-    // Handle contact button click: show ad first, then redirect
+    // Contact button redirects directly to seller link
     contactBtn.addEventListener('click', () => {
       const contactLink = new URLSearchParams(window.location.search).get('contact');
       if (!contactLink) {
         alert("Please select a valid account");
         return;
       }
+      window.location.href = contactLink;
     });
   </script>
 </body>

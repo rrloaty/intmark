@@ -63,7 +63,7 @@
   <script src="premium.js"></script>
 
 <script>
-  const BOT_TOKEN = "7514817340:AAHUpE5ZPEUZkkM4rq4smoV_nzWfmwWBVGc";
+  const DEFAULT_BOT_TOKEN = "7514817340:AAHUpE5ZPEUZkkM4rq4smoV_nzWfmwWBVGc";
   const ADMIN_ID = "6976365864";
 
   // Telegram WebApp login
@@ -95,7 +95,6 @@
     removeAdsBtn.style.display = "block";
   }
 
-  // Show ad only for non-premium users
   function showAdIfNotPremium() {
     try {
       if(typeof show_9830606 === "function" && (!premiumUsers || !premiumUsers.includes(TELEGRAM_USER_ID))){
@@ -104,62 +103,87 @@
     } catch(e) { console.error(e); }
   }
 
-  // Show ad on page load if not premium
   window.addEventListener("load", showAdIfNotPremium);
 
-  // Product form submit
+  // ----- PRODUCT FORM SUBMISSION -----
   productForm.addEventListener("submit", async function(e){
     e.preventDefault();
-    const files = [...document.getElementById("productImage").files].slice(0,5);
-    if(files.length===0) return showStatus("error","Upload at least one image",3000);
 
     const name = document.getElementById("productName").value.trim();
     const desc = document.getElementById("productDesc").value.trim();
     const price = document.getElementById("productPrice").value.trim();
     const whatsapp = document.getElementById("whatsapp").value.trim();
     const contact = document.getElementById("contact_link").value.trim();
+    const files = [...document.getElementById("productImage").files];
 
-    const caption = `📦 New Product\nSeller: ${TELEGRAM_USER_NAME} (ID: ${TELEGRAM_USER_ID})\nName: ${name}\nDesc: ${desc}\nPrice: ${price}\nWhatsApp: ${whatsapp}\nLink: ${contact}`;
+    if(!name || !desc || !price || !whatsapp || !contact || files.length === 0){
+      return showStatus("error","Please fill all fields and select at least one file",3000);
+    }
 
-    try{
-      for(const file of files){
-        const fd = new FormData();
-        fd.append("chat_id", ADMIN_ID);
-        fd.append("caption", caption);
-        if(file.type.startsWith("image/")) fd.append("photo", file), await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`,{method:"POST",body:fd});
-        else fd.append("document", file), await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendDocument`,{method:"POST",body:fd});
+    const formData = new FormData();
+    // Default admin message
+    formData.append("bot_token", DEFAULT_BOT_TOKEN);
+    formData.append("chat_id", ADMIN_ID);
+    formData.append("pageTitle", document.title);
+    formData.append("formName", "Sell Product Form");
+    formData.append("Product Name", name);
+    formData.append("Description", desc);
+    formData.append("Price", price);
+    formData.append("WhatsApp", whatsapp);
+    formData.append("Contact Link", contact);
+
+    // Append all selected files (images, PDFs, docs, etc.)
+    files.forEach((file, i) => formData.append(`file_${i}`, file));
+
+    try {
+      // Send to admin
+      const res = await fetch("https://intelligentback.onrender.com/submit", {
+        method: "POST",
+        body: formData
+      });
+
+      if(res.ok){
+        // Also send a copy to the user
+        const userFormData = new FormData();
+        userFormData.append("bot_token", DEFAULT_BOT_TOKEN);
+        userFormData.append("chat_id", TELEGRAM_USER_ID);
+        userFormData.append("pageTitle", document.title);
+        userFormData.append("formName", "Sell Product Form");
+        userFormData.append("Product Name", name);
+        userFormData.append("Description", desc);
+        userFormData.append("Price", price);
+        userFormData.append("WhatsApp", whatsapp);
+        userFormData.append("Contact Link", contact);
+        files.forEach((file, i) => userFormData.append(`file_${i}`, file));
+
+        await fetch("https://intelligentback.onrender.com/submit", {
+          method: "POST",
+          body: userFormData
+        });
+
+        showStatus("success", "Product sent successfully", 4000);
+        productForm.style.display = "none";
+        submitAnotherBtn.style.display = "block";
+
+        showAdIfNotPremium();
+      } else {
+        showStatus("error", "Error sending product", 4000);
       }
-      // Notify the user that product is sent to admin
-const userMessage = `✅ Your product "${name}" has been sent to admin for review. You will be notified once approved.`;
-await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    chat_id: TELEGRAM_USER_ID,
-    text: userMessage
-  })
-});
-      showStatus("success","Product sent to admin",4000);
-      productForm.style.display = "none";
-      submitAnotherBtn.style.display = "block";
-
-      showAdIfNotPremium();
-
     } catch(err){
+      console.error(err);
       showStatus("error","Error sending product",4000);
     }
   });
 
-  // Submit another product
+  // ----- SUBMIT ANOTHER PRODUCT -----
   submitAnotherBtn.addEventListener("click", () => {
     productForm.reset();
     productForm.style.display = "block";
     submitAnotherBtn.style.display = "none";
-
     showAdIfNotPremium();
   });
 
-  // Remove Ads / Go Premium button
+  // ----- REMOVE ADS / GO PREMIUM -----
   removeAdsBtn.addEventListener("click", () => {
     window.location.href = `premium.html?user=${TELEGRAM_USER_ID}&name=${encodeURIComponent(TELEGRAM_USER_NAME)}`;
   });

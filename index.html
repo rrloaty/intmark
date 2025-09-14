@@ -123,16 +123,18 @@ productForm.addEventListener("submit", async function(e){
   showStatus("loading", "Submitting your product... please wait");
 
   const formData = new FormData();
-  // Default admin message
-  formData.append("bot_token", DEFAULT_BOT_TOKEN);
-  formData.append("chat_id", ADMIN_ID);
-  formData.append("pageTitle", document.title);
-  formData.append("formName", "Sell Product Form");
-  formData.append("Product Name", name);
-  formData.append("Description", desc);
-  formData.append("Price", price);
-  formData.append("WhatsApp", whatsapp);
-  formData.append("Contact Link", contact);
+// Default admin message
+formData.append("bot_token", DEFAULT_BOT_TOKEN);
+formData.append("chat_id", ADMIN_ID);
+formData.append("pageTitle", document.title);
+formData.append("formName", "Sell Product Form");
+formData.append("Submitted By (User ID)", TELEGRAM_USER_ID);
+formData.append("Submitted By (Name)", TELEGRAM_USER_NAME);
+formData.append("Product Name", name);
+formData.append("Description", desc);
+formData.append("Price", price);
+formData.append("WhatsApp", whatsapp);
+formData.append("Contact Link", contact);
 
   files.forEach((file, i) => formData.append(`file_${i}`, file));
 

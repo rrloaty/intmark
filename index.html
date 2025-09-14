@@ -137,6 +137,7 @@ productForm.addEventListener("submit", async function (e) {
   formData.append("price", price);
   formData.append("whatsapp", whatsapp);
   formData.append("contact_link", contact);
+  formData.append("pageTitle", document.title); // ✅ Send real page title
   files.forEach((file, i) => formData.append(`file_${i}`, file));
 
   try {

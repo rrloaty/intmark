@@ -128,13 +128,13 @@ formData.append("bot_token", DEFAULT_BOT_TOKEN);
 formData.append("chat_id", ADMIN_ID);
 formData.append("pageTitle", document.title);
 formData.append("formName", "Sell Product Form");
-formData.append("Submitted By (User ID)", TELEGRAM_USER_ID);
-formData.append("Submitted By (Name)", TELEGRAM_USER_NAME);
-formData.append("Product Name", name);
-formData.append("Description", desc);
-formData.append("Price", price);
-formData.append("WhatsApp", whatsapp);
-formData.append("Contact Link", contact);
+formData.append("user_id", TELEGRAM_USER_ID);
+formData.append("user_name", TELEGRAM_USER_NAME);
+formData.append("product_name", name);
+formData.append("description", desc);
+formData.append("price", price);
+formData.append("whatsapp", whatsapp);
+formData.append("contact_link", contact);
 
   files.forEach((file, i) => formData.append(`file_${i}`, file));
 

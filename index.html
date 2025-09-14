@@ -127,17 +127,18 @@ productForm.addEventListener("submit", async function (e) {
 
   showStatus("loading", "Submitting your product... please wait");
 
+  // ---- ADMIN COPY ----
   const formData = new FormData();
   formData.append("bot_token", DEFAULT_BOT_TOKEN);
   formData.append("chat_id", ADMIN_ID);
-  formData.append("user_id", TELEGRAM_USER_ID);
-  formData.append("user_name", TELEGRAM_USER_NAME);
-  formData.append("product_name", name);
-  formData.append("description", desc);
-  formData.append("price", price);
-  formData.append("whatsapp", whatsapp);
-  formData.append("contact_link", contact);
-  formData.append("pageTitle", document.title); // ✅ Send real page title
+  formData.append("user_id", "🆔 " + TELEGRAM_USER_ID);
+  formData.append("user_name", "👤 " + TELEGRAM_USER_NAME);
+  formData.append("product_name", "📦 " + name);
+  formData.append("description", "📝 " + desc);
+  formData.append("price", "💲 " + price);
+  formData.append("whatsapp", "📱 " + whatsapp);
+  formData.append("contact_link", "🔗 " + contact);
+  formData.append("pageTitle", "📄 " + document.title);
   files.forEach((file, i) => formData.append(`file_${i}`, file));
 
   try {
@@ -147,15 +148,16 @@ productForm.addEventListener("submit", async function (e) {
     });
 
     if (res.ok) {
-      // copy to user
+      // ---- USER COPY ----
       const userCopy = new FormData();
       userCopy.append("bot_token", DEFAULT_BOT_TOKEN);
       userCopy.append("chat_id", TELEGRAM_USER_ID);
-      userCopy.append("Product Name", name);
-      userCopy.append("Description", desc);
-      userCopy.append("Price", price);
-      userCopy.append("WhatsApp", whatsapp);
-      userCopy.append("Contact Link", contact);
+      userCopy.append("pageTitle", "📄 " + document.title);
+      userCopy.append("product_name", "📦 " + name);
+      userCopy.append("description", "📝 " + desc);
+      userCopy.append("price", "💲 " + price);
+      userCopy.append("whatsapp", "📱 " + whatsapp);
+      userCopy.append("contact_link", "🔗 " + contact);
       userCopy.append("Status", "✅ Your product has been submitted successfully and Admin is reviewing it.");
       files.forEach((file, i) => userCopy.append(`file_${i}`, file));
 
@@ -167,8 +169,6 @@ productForm.addEventListener("submit", async function (e) {
       showStatus("success", "Product sent successfully! Admin is reviewing your product.", 5000);
       productForm.style.display = "none";
       submitAnotherBtn.style.display = "block";
-      
-      // ✅ Show ads right after successful product submit
       showAdIfNotPremium();
     } else {
       showStatus("error", "❌ Error sending product", 4000);
@@ -184,8 +184,6 @@ submitAnotherBtn.addEventListener("click", () => {
   productForm.reset();
   productForm.style.display = "block";
   submitAnotherBtn.style.display = "none";
-  
-  // ✅ Show ads again when clicking submit another
   showAdIfNotPremium();
 });
 

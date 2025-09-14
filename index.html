@@ -12,7 +12,6 @@
     .loading { background:#fff3cd; color:#856404; }
     .success { background:#d4edda; color:#155724; }
     .error { background:#f8d7da; color:#721c24; }
-    .muted { color:#666; font-size:13px; }
     label { display:block; margin-top:12px; font-weight:600; }
     input, textarea { width:100%; padding:10px; margin-top:6px; border:1px solid #ccc; border-radius:6px; font-size:14px; box-sizing:border-box; }
     button { padding:10px 14px; margin-top:12px; background:#007bff; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:700; }
@@ -27,7 +26,7 @@
     <h2>Intelligent Marketplace</h2>
 
     <!-- User info display -->
-    <div id="userInfo"></div>
+    <div id="userInfo">Loading Telegram user...</div>
 
     <div id="status" class="status"></div>
 
@@ -61,24 +60,35 @@
 
   <!-- Premium users list -->
   <script src="premium.js"></script>
+
 <script>
-const DEFAULT_BOT_TOKEN = "7514817340:AAHUpE5ZPEUZkkM4rq4smoV_nzWfmwWBVGc";
+const BOT_TOKEN = "7514817340:AAHUpE5ZPEUZkkM4rq4smoV_nzWfmwWBVGc";
 const ADMIN_ID = "6976365864";
 
-// Telegram WebApp login
+// Init Telegram WebApp
 const tg = window.Telegram.WebApp;
 tg.expand();
-const TELEGRAM_USER_ID = tg.initDataUnsafe?.user?.id || "000";
-const TELEGRAM_USER_NAME = (tg.initDataUnsafe?.user?.first_name || "") + 
-                           (tg.initDataUnsafe?.user?.last_name ? " " + tg.initDataUnsafe.user.last_name : "") || "John Doe";
 
-document.getElementById("userInfo").textContent = 
+// Get Telegram user
+let TELEGRAM_USER_ID = "000";
+let TELEGRAM_USER_NAME = "Unknown User";
+
+if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+  TELEGRAM_USER_ID = tg.initDataUnsafe.user.id;
+  TELEGRAM_USER_NAME = `${tg.initDataUnsafe.user.first_name || ""} ${tg.initDataUnsafe.user.last_name || ""}`.trim();
+} else {
+  // fallback for browser testing
+  TELEGRAM_USER_ID = "test123";
+  TELEGRAM_USER_NAME = "Test User";
+}
+
+document.getElementById("userInfo").textContent =
   `Logged in as: ${TELEGRAM_USER_NAME} (ID: ${TELEGRAM_USER_ID})`;
 
 const statusBox = document.getElementById("status");
+const productForm = document.getElementById("product-form");
 const submitAnotherBtn = document.getElementById("submitAnother");
 const removeAdsBtn = document.getElementById("removeAds");
-const productForm = document.getElementById("product-form");
 
 function showStatus(type, msg, autoHide=0){
   statusBox.className = "status " + type;
@@ -87,111 +97,70 @@ function showStatus(type, msg, autoHide=0){
   if(autoHide) setTimeout(()=>statusBox.style.display="none", autoHide);
 }
 
-// Hide Remove Ads button if user is premium
-if(typeof premiumUsers !== "undefined" && premiumUsers.includes(TELEGRAM_USER_ID)){
+// Ads for non-premium users
+if (typeof premiumUsers !== "undefined" && premiumUsers.includes(String(TELEGRAM_USER_ID))) {
   removeAdsBtn.style.display = "none";
 } else {
   removeAdsBtn.style.display = "block";
+  window.addEventListener("load", () => {
+    try { if (typeof show_9830606 === "function") show_9830606(); } catch(e){ console.error(e); }
+  });
 }
 
-function showAdIfNotPremium() {
-  try {
-    if(typeof show_9830606 === "function" && (!premiumUsers || !premiumUsers.includes(TELEGRAM_USER_ID))){
-      show_9830606();
-    }
-  } catch(e) { console.error(e); }
-}
-
-window.addEventListener("load", showAdIfNotPremium);
-
-// ----- PRODUCT FORM SUBMISSION -----
-productForm.addEventListener("submit", async function(e){
+// Form submit
+productForm.addEventListener("submit", async e => {
   e.preventDefault();
 
+  const files = [...document.getElementById("productImage").files];
   const name = document.getElementById("productName").value.trim();
   const desc = document.getElementById("productDesc").value.trim();
   const price = document.getElementById("productPrice").value.trim();
   const whatsapp = document.getElementById("whatsapp").value.trim();
   const contact = document.getElementById("contact_link").value.trim();
-  const files = [...document.getElementById("productImage").files];
 
   if(!name || !desc || !price || !whatsapp || !contact || files.length === 0){
     return showStatus("error","Please fill all fields and select at least one file",3000);
   }
 
-  // Show pending/loading status
-  showStatus("loading", "Submitting your product... please wait");
+  showStatus("loading","Submitting your product...");
 
   const formData = new FormData();
-// Default admin message
-formData.append("bot_token", DEFAULT_BOT_TOKEN);
-formData.append("chat_id", ADMIN_ID);
-formData.append("pageTitle", document.title);
-formData.append("formName", "Sell Product Form");
-formData.append("user_id", TELEGRAM_USER_ID);
-formData.append("user_name", TELEGRAM_USER_NAME);
-formData.append("product_name", name);
-formData.append("description", desc);
-formData.append("price", price);
-formData.append("whatsapp", whatsapp);
-formData.append("contact_link", contact);
-
+  formData.append("bot_token", BOT_TOKEN);
+  formData.append("chat_id", ADMIN_ID);
+  formData.append("user_id", TELEGRAM_USER_ID);
+  formData.append("user_name", TELEGRAM_USER_NAME);
+  formData.append("product_name", name);
+  formData.append("description", desc);
+  formData.append("price", price);
+  formData.append("whatsapp", whatsapp);
+  formData.append("contact_link", contact);
   files.forEach((file, i) => formData.append(`file_${i}`, file));
 
   try {
-    // Send to admin
-    const res = await fetch("https://intelligentback.onrender.com/submit", {
-      method: "POST",
-      body: formData
-    });
+    const res = await fetch("https://intelligentback.onrender.com/submit", { method:"POST", body:formData });
 
     if(res.ok){
-      showStatus("loading", "Product submitted! Admin is reviewing it...", 2000);
-
-      // Send a copy to the user with review note
-      const userFormData = new FormData();
-      userFormData.append("bot_token", DEFAULT_BOT_TOKEN);
-      userFormData.append("chat_id", TELEGRAM_USER_ID);
-      userFormData.append("pageTitle", document.title);
-      userFormData.append("formName", "Sell Product Form");
-      userFormData.append("Product Name", name);
-      userFormData.append("Description", desc);
-      userFormData.append("Price", price);
-      userFormData.append("WhatsApp", whatsapp);
-      userFormData.append("Contact Link", contact);
-      userFormData.append("Status", "✅ Your product has been submitted successfully and Admin is reviewing it.");
-      files.forEach((file, i) => userFormData.append(`file_${i}`, file));
-
-      await fetch("https://intelligentback.onrender.com/submit", {
-        method: "POST",
-        body: userFormData
-      });
-
-      // Show final success
-      showStatus("success", "Product sent successfully! Admin is reviewing your product.", 5000);
-      productForm.style.display = "none";
-      submitAnotherBtn.style.display = "block";
-
-      showAdIfNotPremium();
+      showStatus("success","✅ Product submitted! Admin is reviewing it.",5000);
+      productForm.style.display="none";
+      submitAnotherBtn.style.display="block";
     } else {
-      showStatus("error", "❌ Error sending product", 4000);
+      showStatus("error","❌ Failed to submit product",5000);
     }
   } catch(err){
     console.error(err);
-    showStatus("error","❌ Error sending product",4000);
+    showStatus("error","❌ Network error",5000);
   }
 });
 
-// ----- SUBMIT ANOTHER PRODUCT -----
-submitAnotherBtn.addEventListener("click", () => {
+// Submit another product
+submitAnotherBtn.addEventListener("click",()=>{
   productForm.reset();
-  productForm.style.display = "block";
-  submitAnotherBtn.style.display = "none";
-  showAdIfNotPremium();
+  productForm.style.display="block";
+  submitAnotherBtn.style.display="none";
 });
 
-// ----- REMOVE ADS / GO PREMIUM -----
-removeAdsBtn.addEventListener("click", () => {
+// Remove ads → Go premium
+removeAdsBtn.addEventListener("click",()=>{
   window.location.href = `premium.html?user=${TELEGRAM_USER_ID}&name=${encodeURIComponent(TELEGRAM_USER_NAME)}`;
 });
 </script>

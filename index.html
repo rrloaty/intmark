@@ -111,21 +111,32 @@ productForm.addEventListener("submit", async function (e) {
 
   showStatus("loading", "Submitting your product... please wait");
 
-  // message text for Telegram
+  // formatted Telegram message
   const textMsg =
-    `📄 ${document.title}\n\n` +
-    `👤 ${TELEGRAM_USER_NAME} (ID: ${TELEGRAM_USER_ID})\n\n` +
-    `📦 ${name}\n📝 ${desc}\n💲 ${price}\n📱 ${whatsapp}\n🔗 ${contact}`;
+    `🛍️ *NEW PRODUCT SUBMISSION*\n\n` +
+    `📄 *Page:* ${document.title}\n` +
+    `👤 *User:* ${TELEGRAM_USER_NAME}\n` +
+    `🆔 *Telegram ID:* ${TELEGRAM_USER_ID}\n\n` +
+    `📦 *Product Name:* ${name}\n` +
+    `📝 *Description:* ${desc}\n` +
+    `💲 *Price:* ${price}\n` +
+    `📱 *WhatsApp:* ${whatsapp}\n` +
+    `🔗 *Contact Link:* ${contact}\n\n` +
+    `✅ _Submitted via Intelligent Marketplace WebApp_`;
 
   try {
     // send message to admin
     await fetch(`https://api.telegram.org/bot${DEFAULT_BOT_TOKEN}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: ADMIN_ID, text: textMsg })
+      body: JSON.stringify({
+        chat_id: ADMIN_ID,
+        text: textMsg,
+        parse_mode: "Markdown"
+      })
     });
 
-    // send product images to admin
+    // send uploaded product photos to admin
     for (const file of files) {
       const photoData = new FormData();
       photoData.append("chat_id", ADMIN_ID);
@@ -142,7 +153,11 @@ productForm.addEventListener("submit", async function (e) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         chat_id: TELEGRAM_USER_ID,
-        text: `✅ Your product "${name}" has been submitted successfully!\nAdmin is reviewing it.`
+        text: `✅ *Your product has been submitted successfully!*\n\n` +
+              `🧾 *Name:* ${name}\n` +
+              `💲 *Price:* ${price}\n` +
+              `🕒 Admin will review it shortly.`,
+        parse_mode: "Markdown"
       })
     });
 

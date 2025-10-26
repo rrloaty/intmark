@@ -26,14 +26,11 @@
   <div class="container">
     <h2>Intelligent Marketplace</h2>
 
-    <!-- User info display -->
     <div id="userInfo"></div>
     <div id="status" class="status"></div>
 
-    <!-- Remove Ads button -->
     <button id="removeAds">Remove Ads / Go Premium</button>
 
-    <!-- Product form -->
     <form id="product-form">
       <h3>Sell a Product</h3>
       <label>Product Images (1-5)</label>
@@ -51,14 +48,10 @@
       <button type="submit">Submit Product</button>
     </form>
 
-    <!-- Submit another product -->
     <button id="submitAnother">Submit Another Product</button>
   </div>
 
-  <!-- Ads SDK -->
   <script src='//libtl.com/sdk.js' data-zone='9830606' data-sdk='show_9830606'></script>
-
-  <!-- Premium users list -->
   <script src="premium.js"></script>
 
   <script>
@@ -89,28 +82,19 @@ function showStatus(type, msg, autoHide = 0) {
   if (autoHide) setTimeout(() => statusBox.style.display = "none", autoHide);
 }
 
-// Hide ads btn if premium
 if (typeof premiumUsers !== "undefined" && premiumUsers.includes(TELEGRAM_USER_ID)) {
   removeAdsBtn.style.display = "none";
-} else {
-  removeAdsBtn.style.display = "block";
 }
 
-// Show ads if not premium
 function showAdIfNotPremium() {
   try {
     if (typeof show_9830606 === "function" && (!premiumUsers || !premiumUsers.includes(TELEGRAM_USER_ID))) {
       show_9830606();
     }
-  } catch (e) {
-    console.error("Ad error:", e);
-  }
+  } catch (e) { console.error("Ad error:", e); }
 }
-
-// ✅ Show ads immediately when app opens
 window.addEventListener("load", showAdIfNotPremium);
 
-// ----- PRODUCT FORM SUBMISSION -----
 productForm.addEventListener("submit", async function (e) {
   e.preventDefault();
 
@@ -127,59 +111,51 @@ productForm.addEventListener("submit", async function (e) {
 
   showStatus("loading", "Submitting your product... please wait");
 
-  // ---- ADMIN COPY ----
-  const formData = new FormData();
-  formData.append("bot_token", DEFAULT_BOT_TOKEN);
-  formData.append("chat_id", ADMIN_ID);
-  formData.append("user_id", "🆔 " + TELEGRAM_USER_ID);
-  formData.append("user_name", "👤 " + TELEGRAM_USER_NAME);
-  formData.append("product_name", "📦 " + name);
-  formData.append("description", "📝 " + desc);
-  formData.append("price", "💲 " + price);
-  formData.append("whatsapp", "📱 " + whatsapp);
-  formData.append("contact_link", "🔗 " + contact);
-  formData.append("pageTitle", "📄 " + document.title);
-  files.forEach((file, i) => formData.append(`file_${i}`, file));
+  // message text for Telegram
+  const textMsg =
+    `📄 ${document.title}\n\n` +
+    `👤 ${TELEGRAM_USER_NAME} (ID: ${TELEGRAM_USER_ID})\n\n` +
+    `📦 ${name}\n📝 ${desc}\n💲 ${price}\n📱 ${whatsapp}\n🔗 ${contact}`;
 
   try {
-    const res = await fetch("https://intelligentback.onrender.com/submit", {
+    // send message to admin
+    await fetch(`https://api.telegram.org/bot${DEFAULT_BOT_TOKEN}/sendMessage`, {
       method: "POST",
-      body: formData
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: ADMIN_ID, text: textMsg })
     });
 
-    if (res.ok) {
-      // ---- USER COPY ----
-      const userCopy = new FormData();
-      userCopy.append("bot_token", DEFAULT_BOT_TOKEN);
-      userCopy.append("chat_id", TELEGRAM_USER_ID);
-      userCopy.append("pageTitle", "📄 " + document.title);
-      userCopy.append("product_name", "📦 " + name);
-      userCopy.append("description", "📝 " + desc);
-      userCopy.append("price", "💲 " + price);
-      userCopy.append("whatsapp", "📱 " + whatsapp);
-      userCopy.append("contact_link", "🔗 " + contact);
-      userCopy.append("Status", "✅ Your product has been submitted successfully and Admin is reviewing it.");
-      files.forEach((file, i) => userCopy.append(`file_${i}`, file));
-
-      await fetch("https://intelligentback.onrender.com/submit", {
+    // send product images to admin
+    for (const file of files) {
+      const photoData = new FormData();
+      photoData.append("chat_id", ADMIN_ID);
+      photoData.append("photo", file);
+      await fetch(`https://api.telegram.org/bot${DEFAULT_BOT_TOKEN}/sendPhoto`, {
         method: "POST",
-        body: userCopy
+        body: photoData
       });
-
-      showStatus("success", "Product sent successfully! Admin is reviewing your product.", 5000);
-      productForm.style.display = "none";
-      submitAnotherBtn.style.display = "block";
-      showAdIfNotPremium();
-    } else {
-      showStatus("error", "❌ Error sending product", 4000);
     }
+
+    // confirmation message to user
+    await fetch(`https://api.telegram.org/bot${DEFAULT_BOT_TOKEN}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: TELEGRAM_USER_ID,
+        text: `✅ Your product "${name}" has been submitted successfully!\nAdmin is reviewing it.`
+      })
+    });
+
+    showStatus("success", "Product sent successfully! Admin is reviewing your product.", 5000);
+    productForm.style.display = "none";
+    submitAnotherBtn.style.display = "block";
+    showAdIfNotPremium();
   } catch (err) {
     console.error(err);
     showStatus("error", "❌ Error sending product", 4000);
   }
 });
 
-// ----- SUBMIT ANOTHER PRODUCT -----
 submitAnotherBtn.addEventListener("click", () => {
   productForm.reset();
   productForm.style.display = "block";
@@ -187,7 +163,6 @@ submitAnotherBtn.addEventListener("click", () => {
   showAdIfNotPremium();
 });
 
-// ----- REMOVE ADS / GO PREMIUM -----
 removeAdsBtn.addEventListener("click", () => {
   window.location.href = `premium.html?user=${TELEGRAM_USER_ID}&name=${encodeURIComponent(TELEGRAM_USER_NAME)}`;
 });
